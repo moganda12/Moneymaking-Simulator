@@ -39,7 +39,7 @@
 
 using str = std::string;
 
-const str vers = "0.1.0";
+const str vers = "0.1.1 Release cantidate A";
 const str flavortexts[] = {"Chocolate", "Vanilla", "Strawberry","I'm rich honey","ME MONEY","make this progam with make.sh, just like money.","delicous","If your wondering what this text is it's called flavortext and it's meant to be funny and entertainig"};
 const float expansionValue = 1.15;
 
@@ -187,6 +187,7 @@ int main() {
 				std::cout << BOLDBLUE << "load" << RESET << " - Loads chosen save\n";
 				std::cout << BOLDBLUE << "delete" << RESET << " - Deletes chosen save\n";
 				std::cout << BOLDBLUE << "balance" << RESET << " - Shows your balance\n";
+				std::cout << BOLDBLUE << "info" << RESET << " - Shows info about the game\n";
 			};
 		} else if(tokens[0] == "make") {
 			if(tokens[1] == "money") {
@@ -247,6 +248,7 @@ int main() {
 				float totalPrice = 0;
 				while(gameState.money >= totalPrice) {
 					totalPrice += expansionFunction(gameState.joeCount + canBuy, joePrice);
+					canBuy++;
 				};
 				std::cout << BOLDBLUE << "Can Buy: " << BOLDGREEN << canBuy << "\n";
 			} else {
@@ -256,7 +258,21 @@ int main() {
 			std::cout << BOLDBLUE << "You have" << RESET << ": " << BOLDGREEN << munmuns << "$\n";
 			std::cout << BOLDBLUE << "You make" << RESET << ": " << BOLDGREEN << "+" << munmunsAMake << "$\n";
 			};
-		} else {
+		} else if(tokens[0] == "info") {
+			if(tokens.size() > 1) {
+				if(tokens[1] == "joe") {
+					std::cout << BOLDWHITE << "JOE\n";
+					std::cout << BOLDCYAN << "Description:\n";
+					std::cout << RESET << "Joe is your average joe, not to tall, not to short, just average.\n";
+					std::cout << BOLDCYAN << "Properties:\n";
+					std::cout << RESET << "A Joe intialy costs ten dollars and,\nincreases your income by one dollar every time you make a joe.\n";
+				} ;
+			} else {
+				std::cout << BOLDGREEN << "Moneymaking Simulator! " << RESET << "version " << vers << "\n";
+				std::cout << BOLDBLUE << "Changelog:\n";
+				std::cout << RESET << "Added INFO command\n Added help entry for INFO command";
+			};
+		} {
 			std::cout << BOLDRED << "Error: Unknown command: " << command << "\n";
 		};
 	};
