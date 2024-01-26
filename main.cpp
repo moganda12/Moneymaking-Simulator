@@ -39,7 +39,7 @@
 
 using str = std::string;
 
-const str vers = "0.1.1 Release cantidate A";
+const str vers = "0.1.1";
 const str flavortexts[] = {"Chocolate", "Vanilla", "Strawberry","I'm rich honey","ME MONEY","make this progam with make.sh, just like money.","delicous","If your wondering what this text is it's called flavortext and it's meant to be funny and entertainig"};
 const float expansionValue = 1.15;
 
@@ -51,13 +51,38 @@ int munmunsAMake = 1;
 float joeGain = 1;
 float joePrice = 10;
 
-struct Save {
+struct OldSave {
 	float money;
 	float moneyAMake;
 	int joeCount;
 };
 
-Save gameState = {0, 1, 0};
+struct Save {
+	float money;
+	int joeCount;
+};
+
+class string {
+	str* addr;
+public:
+	string(str content) {
+		addr = new str(content);
+	}
+	void set(str content) {
+		delete addr;
+		addr = new str(content);
+	}
+	str get() {
+		return *addr;
+	}
+	~string() {
+		delete addr;
+	}
+};
+
+Save gameState = {0, 0};
+
+string defsave = string("def-save");
 
 int system(str __command) {
 	return system(__command.data());
@@ -87,9 +112,19 @@ void changeMoney(float change) {
 	munmuns = gameState.money;
 }
 
-void changeProfit(float change) {
-	gameState.moneyAMake += change;
-	munmunsAMake = gameState.moneyAMake;
+float getJoeProfit() {
+	return joeGain * gameState.joeCount;
+}
+
+float getProfit() {
+	float profit = 1;
+	profit += getJoeProfit();
+	return profit;
+}
+
+void updateCash() {
+	munmuns = gameState.money;
+	munmunsAMake = getProfit();
 }
 
 void save(Save s, str savename) {
@@ -106,12 +141,24 @@ Save load(str savename) {
 	return s;
 }
 
+OldSave oldLoad(str savename) {
+	std::ifstream savefile("saves/" + savename + ".cash", std::ios::binary);
+	OldSave s;
+	savefile.read((char*)&s, sizeof(OldSave));
+	return s;
+}
+
 float expansionFunction(int count, float startPrice) {
 	return startPrice * pow(expansionValue, count);
 }
 
 int strArrayLen(str& array) {
 	return sizeof(array) / sizeof(str);
+}
+
+int crash(int exitcode) {
+	save(gameState, defsave.get());
+	return exitcode;
 }
 
 int main() {
@@ -125,6 +172,7 @@ int main() {
 		str command;
 		std::cout << BOLDBLUE << "Moneymaker" << RESET << "$ ";
 		std::getline(std::cin, command);
+		string jerry = string("jerry");
 
 		std::vector<str> tokens = split(command, " ");
 		
@@ -173,11 +221,20 @@ int main() {
 				//gives help on balance command
 				std::cout << BOLDWHITE << "BALANCE\n" << RESET << "Shows balance of specified thing, if no thing is specified it shows your cash balance\n";
 				std::cout << BOLDBLUE << "Usage:\n" << RESET << "balance [thing]\n";
+			} else if(tokens[1] == "info") {
+				//gives help on info command
+				std::cout << BOLDWHITE << "INFO\n" << RESET << "Shows info on specified thing, if no thing is specified shows info on the most recent update\n";
+				std::cout << BOLDBLUE << "Usage:\n" << RESET << "info [thing]\n";
+			} else if(tokens[1] == "update") {
+				//gives help on update command
+				std::cout << BOLDWHITE << "UPDATE\n" << RESET << "Updates the selected save, if no save is specified gives error\n";
+				std::cout << BOLDBLUE << "Usage:\n" << RESET << "update [save]\n";
 			} else {
 				//informs user that they have specified an invalid command
 				std::cout << BOLDRED << "ERROR: " << RESET << "Command not found, we can't help you with a command that does't exist\n";
 			};
 			} else {
+				//gives help on all commands
 				std::cout << BOLDBLUE << "Commands:\n";
 				std::cout << BOLDBLUE << "exit" << RESET << " - Exit the game\n";
 				std::cout << BOLDBLUE << "clear" << RESET << " - Clear the screen\n";
@@ -188,10 +245,12 @@ int main() {
 				std::cout << BOLDBLUE << "delete" << RESET << " - Deletes chosen save\n";
 				std::cout << BOLDBLUE << "balance" << RESET << " - Shows your balance\n";
 				std::cout << BOLDBLUE << "info" << RESET << " - Shows info about the game\n";
+				std::cout << BOLDBLUE << "update" << RESET << " - Updates the save\n";
 			};
 		} else if(tokens[0] == "make") {
 			if(tokens[1] == "money") {
-				changeMoney(gameState.moneyAMake);
+				//makes money
+				changeMoney(getProfit());
 				std::cout << BOLDBLUE << "You made" << RESET << ": " << BOLDGREEN << munmunsAMake << "$\n";
 			} else if(tokens[1] == "joe") {
 				if(tokens.size() > 2) {
@@ -205,7 +264,6 @@ int main() {
 					if (gameState.money >= totalPrice) {
 						changeMoney(-totalPrice);
 						gameState.joeCount += countToBuy;
-						changeProfit(joeGain*countToBuy);
 					} else {
 					std::cout << RED << "You don't have enough money to make " << countToBuy << " joe(s).\n";
 				};
@@ -213,12 +271,12 @@ int main() {
 				//buys as many joes as it can
 				int bought = 0;
 				float totalPrice = 0;
-				while(gameState.money >= expansionFunction(gameState.joeCount, joePrice)) {
+				while(gameState.money >= expansionFunction(gameState.joeCount, joePrice)/*checks if you can afford a joe*/) {
+					//purchases 1 joe
 					changeMoney(-expansionFunction(gameState.joeCount, joePrice));
 					totalPrice += expansionFunction(gameState.joeCount, joePrice);
 					gameState.joeCount++;
 					bought++;
-					changeProfit(joeGain);
 				};
 				//displays total joes boght along with total price
 				std::cout << BOLDBLUE << "You bought: " << BOLDGREEN << bought << BOLDBLUE << " Joe(s) for " << BOLDGREEN << ceil(totalPrice) << "$\n";
@@ -227,52 +285,125 @@ int main() {
 				std::cout << BOLDRED << "ERRROR: " << tokens[1] << " is not somthing you can make\n";
 			};
 		} else if(tokens[0] == "save") {
-			save(gameState, tokens[1]);
-			std::cout << BOLDGREEN << "Saved game to " << tokens[1] << ".cash!\n";
-		} else if(tokens[0] == "load") {
-			Save save = load(tokens[1]);
-			gameState = save;
-			changeMoney(0);
-			changeProfit(0);
-			std::cout << BOLDGREEN << "Loaded save " << tokens[1] << " succecfully!\n";
-		} else if(tokens[0] == "delete") {
-			str path = "saves/" + tokens[1] + ".cash";
-			std::remove(path.c_str());
-			std::cout << BOLDGREEN << "Successfully deleted save " << tokens[1] << "!\n";
-		} else if(tokens[0] == "balance") {
+			//checks if user specified save
+			str savename;
 			if(tokens.size() > 1) {
+				//sets the deafualt save to the selected save
+				savename = tokens[1];
+				defsave.set(savename);
+			} else {
+				//selects the current defualt save
+				savename = defsave.get();
+			};
+			//saves game
+			save(gameState, savename);
+			std::cout << BOLDGREEN << "Saved game to " << savename << ".cash!\n";
+		} else if(tokens[0] == "load") {
+			//checks if user specified save
+			str savename;
+			if(tokens.size() > 1) {
+				//sets the deafualt save to the selected save
+				savename = tokens[1];
+				defsave.set(savename);
+			} else {
+				//selects the current defualt save
+				savename = defsave.get();
+			};
+			//loads game
+			Save save = load(savename);
+			gameState = save;
+			updateCash();
+			std::cout << BOLDGREEN << "Loaded save " << savename << " succecfully!\n";
+		} else if(tokens[0] == "delete") {
+			//checks if user specified save
+			str savename;
+			if(tokens.size() < 1) {
+				//if not gives error
+				std::cout << "ERROR: did not provide save";
+			} else {
+				//deletes specified save
+				savename = tokens[1];
+				str path = "saves/" + savename + ".cash";
+				std::remove(path.c_str());
+				std::cout << BOLDGREEN << "Successfully deleted save " << savename << "!\n";
+			};
+		} else if(tokens[0] == "balance") {
+			//checks if user specified thing
+			if(tokens.size() > 1) {
+			//if so checks which thing
 			if(tokens[1] == "joe") {
+				//displays joe count
 				std::cout << BOLDBLUE << "Joe Count: " << BOLDGREEN << gameState.joeCount << "\n";
+				//displays current joe price
 				std::cout << BOLDBLUE << "Joe Price: " << BOLDGREEN << ceil(expansionFunction(gameState.joeCount, joePrice)) << "$\n";
+				//finds how many joes you can buy
 				int canBuy = 0;
-				float totalPrice = 0;
+				float totalPrice = totalPrice += expansionFunction(gameState.joeCount + canBuy, joePrice);;
 				while(gameState.money >= totalPrice) {
 					totalPrice += expansionFunction(gameState.joeCount + canBuy, joePrice);
 					canBuy++;
 				};
+				//displays how many joes you can buy
 				std::cout << BOLDBLUE << "Can Buy: " << BOLDGREEN << canBuy << "\n";
 			} else {
+				//notifys user that they have specified an invalid thing
 				std::cout << BOLDRED << "ERROR: " << tokens[1] << " is not somthing you can check balance of as it does not exist.\n";
-			}
+			};
 			} else {
+			//shows cash balance
 			std::cout << BOLDBLUE << "You have" << RESET << ": " << BOLDGREEN << munmuns << "$\n";
 			std::cout << BOLDBLUE << "You make" << RESET << ": " << BOLDGREEN << "+" << munmunsAMake << "$\n";
 			};
 		} else if(tokens[0] == "info") {
+			//checks if user specified thing
 			if(tokens.size() > 1) {
+				//checks which thing they specified
 				if(tokens[1] == "joe") {
+					//diplays info about joe
 					std::cout << BOLDWHITE << "JOE\n";
 					std::cout << BOLDCYAN << "Description:\n";
 					std::cout << RESET << "Joe is your average joe, not to tall, not to short, just average.\n";
 					std::cout << BOLDCYAN << "Properties:\n";
-					std::cout << RESET << "A Joe intialy costs ten dollars and,\nincreases your income by one dollar every time you make a joe.\n";
-				} ;
-			} else {
+					std::cout << RESET << "A Joe intialy costs ten dollars and,\n"
+					<< "increases your income by one dollar every time you make a joe.\n";
+				}  else if(tokens[1] == "money") {
+					//displays info about money
+					std::cout << BOLDWHITE << "MONEY\n";
+					std::cout << BOLDCYAN << "Description";
+					std::cout << RESET << "Money is of course ye's FREEDOM DOLLARS, and it\n"
+					<< "is also the main currency of the game!";
+					std::cout << BOLDCYAN << "Properties:\n";
+					std::cout << RESET << "Money can be made by typing out 'make money'.\n"
+					<< "It is used to puchase most things in-game\n";
+				};
+			} else{
+				//displays info about the most recent update
 				std::cout << BOLDGREEN << "Moneymaking Simulator! " << RESET << "version " << vers << "\n";
 				std::cout << BOLDBLUE << "Changelog:\n";
-				std::cout << RESET << "Added INFO command\n Added help entry for INFO command";
+				std::cout << RESET << "Added INFO command\nAdded save caching\nAdded update command\n";
 			};
-		} {
+		} else if(tokens[0] == "update") {
+			//updates game save
+			//checks if user specified save
+			if(tokens.size() > 1) {
+				//sets the deafualt save to the selected save
+				defsave.set(tokens[1]);
+				//loads old save file
+				OldSave Old = oldLoad(tokens[1]);
+				//creates new temporary save
+				Save tsave = {0,0};
+				//populates it witht the old save's data
+				tsave.money = Old.money;
+				tsave.joeCount = Old.joeCount;
+				//saves updated save
+				save(tsave, defsave.get());
+				//loads updated save
+				gameState = tsave;
+				updateCash();
+				//tauts it's succsess
+				std::cout << BOLDGREEN << "Successfully updated save " << tokens[1] << "!\n";
+			};
+		} else{
 			std::cout << BOLDRED << "Error: Unknown command: " << command << "\n";
 		};
 	};
